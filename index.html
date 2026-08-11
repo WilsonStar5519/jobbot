@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#08483e" />
+  <title>計劃主任面試練習｜香港遊樂場協會</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Shippori+Mincho:wght@500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="bg-layer" aria-hidden="true"></div>
+  <div class="bg-grid" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <button type="button" class="brand brand-btn" id="homeBtn" aria-label="返回首頁">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <div>
+        <p class="brand-name">HKPA 面試教練</p>
+        <p class="brand-sub">計劃主任 ASWO · 課後託管</p>
+      </div>
+    </button>
+    <div class="topbar-meta" id="topbarMeta" hidden>
+      <span id="progressLabel">第 1 / 8 題</span>
+      <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- Welcome -->
+    <section class="panel panel-welcome" id="welcomePanel">
+      <div class="welcome-copy">
+        <p class="eyebrow">模擬面試官 · 個人化回饋 · 自動補題</p>
+        <h1>準備好面對<br /><em>香港遊樂場協會</em><br />計劃主任面試？</h1>
+        <p class="lede">
+          針對關愛基金在校課後託管職位設計。題庫會按你的弱項自動更新；作答後會依你的內容改寫建議與優化版本。支援手機與語音輸入。
+        </p>
+        <div class="cta-row">
+          <button type="button" class="btn btn-primary" id="startBtn">開始模擬面試</button>
+          <button type="button" class="btn btn-ghost" id="weakStartBtn">針對弱項練習</button>
+        </div>
+        <p class="bank-status" id="bankStatus"></p>
+      </div>
+
+      <aside class="welcome-card" id="briefCard">
+        <h2>職位速覽</h2>
+        <dl>
+          <div><dt>機構</dt><dd>香港遊樂場協會</dd></div>
+          <div><dt>單位</dt><dd>賽馬會上葵涌青少年綜合服務（KIT）</dd></div>
+          <div><dt>職位</dt><dd>計劃主任 ASWO</dd></div>
+          <div><dt>計劃</dt><dd>關愛基金—在校課後託管（2026/27）</dd></div>
+          <div><dt>地點</dt><dd>葵青區 · 全職 · 或需週末／假期輪班</dd></div>
+        </dl>
+        <ul class="focus-list">
+          <li>註冊社工（學士或以上）</li>
+          <li>課託／小學全方位社工經驗優先</li>
+          <li>個案、導師管理、假期活動、行政</li>
+        </ul>
+      </aside>
+
+      <!-- Progress snapshot -->
+      <section class="home-block progress-block" id="progressBlock">
+        <div class="block-head">
+          <h2>我的答題歷程</h2>
+          <button type="button" class="btn btn-tiny" id="clearHistoryBtn">清除紀錄</button>
+        </div>
+        <div class="stats-row" id="statsRow">
+          <div class="stat"><strong id="statSessions">0</strong><span>練習次數</span></div>
+          <div class="stat"><strong id="statAvg">—</strong><span>平均分</span></div>
+          <div class="stat"><strong id="statBest">—</strong><span>最高分</span></div>
+          <div class="stat"><strong id="statWeak">—</strong><span>最需加強</span></div>
+        </div>
+        <div class="cat-bars" id="catBars"></div>
+        <div class="history-list" id="historyList">
+          <p class="empty-hint">尚未有練習紀錄。完成一輪面試後會顯示在這裡。</p>
+        </div>
+      </section>
+
+      <!-- Cheat sheets -->
+      <section class="home-block sheets-block">
+        <h2>面試掣記欄</h2>
+        <div class="sheet-tabs" role="tablist" aria-label="掣記欄分類">
+          <button type="button" class="sheet-tab is-active" role="tab" aria-selected="true" data-sheet="mistakes">常犯錯誤</button>
+          <button type="button" class="sheet-tab" role="tab" aria-selected="false" data-sheet="frameworks">答題框架</button>
+          <button type="button" class="sheet-tab" role="tab" aria-selected="false" data-sheet="job">職位筆記</button>
+          <button type="button" class="sheet-tab" role="tab" aria-selected="false" data-sheet="personal">個人備忘</button>
+        </div>
+        <div class="sheet-panels">
+          <div class="sheet-panel is-active" id="sheet-mistakes" role="tabpanel">
+            <ul class="cheat-list">
+              <li><strong>只談理想、不談職責</strong> — 少提個案、導師管理、假期託管、行政。</li>
+              <li><strong>機構介紹像背誦</strong> — 沒有連結個人動機或 KIT／課託場景。</li>
+              <li><strong>危機題忽略程序</strong> — 只說陪伴，沒提安全、督導、紀錄、通報。</li>
+              <li><strong>答應兒童「絕對保密」</strong> — 疑似虐兒時保密有例外。</li>
+              <li><strong>迴避輪班</strong> — 不正面回應週末／假期工作安排。</li>
+              <li><strong>例子沒有結果</strong> — 有情境無行動，或有行動無成效。</li>
+            </ul>
+          </div>
+          <div class="sheet-panel" id="sheet-frameworks" role="tabpanel" hidden>
+            <ul class="cheat-list">
+              <li><strong>機構／動機</strong>：認識機構 → 價值契合 → 為何此職位／單位。</li>
+              <li><strong>STAR（行為題）</strong>：情境 Situation → 任務 Task → 行動 Action → 結果 Result。</li>
+              <li><strong>危機三步</strong>：即時安全 → 專業介入／分工 → 通報跟進與預防。</li>
+              <li><strong>保護兒童</strong>：不承諾絕對保密 → 評估紀錄 → 督導／機構程序。</li>
+              <li><strong>導師管理</strong>：核實事實 → 澄清期望 → 支援提升 → 問責期限。</li>
+              <li><strong>90 日計劃</strong>：熟悉流程 → 建立關係 → 優化營運與檢討。</li>
+            </ul>
+          </div>
+          <div class="sheet-panel" id="sheet-job" role="tabpanel" hidden>
+            <ul class="cheat-list">
+              <li><strong>遊協</strong>：1933 年成立；以人為本、追求卓越；青少年德智體群美全人發展。</li>
+              <li><strong>計劃目標</strong>：在校課後託管與學習支援；支援家長（尤其單親／雙職）外出工作。</li>
+              <li><strong>主任職責</strong>：家長及學童個案／活動、導師現場管理、假期活動、行政。</li>
+              <li><strong>優先經驗</strong>：社署課託、小學全方位社工；註冊社工（學位或以上）。</li>
+              <li><strong>工作現實</strong>：葵青區；週末及公眾假期或需輪班。</li>
+            </ul>
+          </div>
+          <div class="sheet-panel" id="sheet-personal" role="tabpanel" hidden>
+            <label class="memo-label" for="personalMemo">寫下你的個人例子、數據或想記住的要點（自動儲存）</label>
+            <textarea id="personalMemo" class="memo-input" rows="8" placeholder="例如：我在 XX 小學課託處理過 SEN 情緒個案……；可分享的成果：家長滿意度／出席率……"></textarea>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <!-- Interview -->
+    <section class="panel panel-interview" id="interviewPanel" hidden>
+      <div class="session-banner" id="sessionBanner" hidden></div>
+      <div class="interview-layout">
+        <article class="question-stage">
+          <div class="q-meta">
+            <span class="cat-pill" id="categoryPill">機構背景</span>
+            <span class="timer-hint" id="timerHint">建議作答 2–3 分鐘</span>
+          </div>
+          <h2 id="questionText"></h2>
+          <p class="q-hint" id="questionHint"></p>
+          <label class="sr-only" for="answerInput">你的答案</label>
+          <div class="answer-box">
+            <textarea id="answerInput" rows="8" placeholder="以完整句子作答，或按麥克風語音輸入。行為題可參考 STAR。"></textarea>
+            <div class="voice-bar">
+              <button type="button" class="btn-voice" id="voiceBtn" aria-pressed="false" title="語音輸入">
+                <span class="voice-icon" aria-hidden="true"></span>
+                <span id="voiceLabel">語音輸入</span>
+              </button>
+              <span class="voice-status" id="voiceStatus"></span>
+            </div>
+          </div>
+          <div class="answer-tools">
+            <span class="char-count" id="charCount">0 字</span>
+            <div class="tool-btns">
+              <button type="button" class="btn btn-ghost" id="homeFromInterviewBtn">回首頁</button>
+              <button type="button" class="btn btn-primary" id="submitBtn">提交並分析</button>
+            </div>
+          </div>
+        </article>
+
+        <aside class="feedback-stage" id="feedbackStage" aria-live="polite">
+          <div class="feedback-empty" id="feedbackEmpty">
+            <p>提交後會依你的原文指出強項、缺口，並產出個人化優化版本。</p>
+          </div>
+          <div class="feedback-body" id="feedbackBody" hidden>
+            <div class="score-ring-wrap">
+              <div class="score-ring" id="scoreRing">
+                <span id="scoreValue">0</span>
+                <small>／10</small>
+              </div>
+              <div>
+                <p class="score-label" id="scoreLabel">待評估</p>
+                <p class="score-summary" id="scoreSummary"></p>
+              </div>
+            </div>
+            <div class="dimension-list" id="dimensionList"></div>
+            <div class="suggest-block" id="strengthBlock">
+              <h3>你答得好的地方</h3>
+              <ul id="strengthList"></ul>
+            </div>
+            <div class="suggest-block">
+              <h3>針對你答案的改進建議</h3>
+              <ul id="suggestList"></ul>
+            </div>
+            <div class="model-block optimize-block">
+              <h3>個人化優化版本</h3>
+              <p id="optimizedAnswer"></p>
+              <button type="button" class="btn btn-ghost btn-sm" id="useOptimizedBtn">將優化版填回輸入框再練</button>
+            </div>
+            <div class="model-block">
+              <h3>可參考答題方向</h3>
+              <p id="modelAnswer"></p>
+            </div>
+            <button type="button" class="btn btn-primary btn-block" id="nextBtn">下一題</button>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- Results -->
+    <section class="panel panel-results" id="resultsPanel" hidden>
+      <div class="results-hero">
+        <p class="eyebrow">模擬面試報告</p>
+        <h2>整體表現總結</h2>
+        <div class="overall-score">
+          <span id="overallScore">0</span>
+          <small>／10</small>
+        </div>
+        <p id="overallVerdict" class="lede"></p>
+        <p class="bank-refresh-note" id="bankRefreshNote"></p>
+      </div>
+      <div class="results-grid" id="resultsGrid"></div>
+      <div class="results-actions">
+        <button type="button" class="btn btn-primary" id="retryBtn">再練一輪（自動換題）</button>
+        <button type="button" class="btn btn-ghost" id="weakRetryBtn">只練弱項</button>
+        <button type="button" class="btn btn-ghost" id="reviewBtn">回首頁看歷程</button>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>練習用途 · 根據公開招聘資料設計 · 語音需瀏覽器支援（建議 Chrome／Edge）</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
