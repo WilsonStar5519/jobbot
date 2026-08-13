@@ -5,7 +5,8 @@ const state = {
   sessionId: null,
   listening: false,
   recognition: null,
-  voiceBase: "",
+  voicePrefix: "",
+  voiceSuffix: "",
   busy: false,
   audio: null,
   hexAxes: ["職位理解", "個案與家庭工作", "營運與導師管理", "危機與保護兒童", "協作與溝通", "個人特質與抗壓"],
@@ -94,9 +95,12 @@ function setupVoice() {
       if (event.results[i].isFinal) finalBuffer += t;
       else interim += t;
     }
-    const merged = `${state.voiceBase || ""}${finalBuffer}${interim}`.trim();
-    $("answerInput").value = merged;
-    $("charCount").textContent = `${merged.length} 字`;
+    const el = $("answerInput");
+    const insert = `${finalBuffer}${interim}`;
+    el.value = `${state.voicePrefix || ""}${insert}${state.voiceSuffix || ""}`;
+    const caret = (state.voicePrefix || "").length + insert.length;
+    el.setSelectionRange(caret, caret);
+    $("charCount").textContent = `${el.value.trim().length} 字`;
   };
   rec.onerror = (event) => {
     status.textContent = event.error === "not-allowed" ? "請允許麥克風" : "語音未能辨識";
@@ -114,7 +118,11 @@ function setupVoice() {
 
 function startVoice() {
   if (!state.recognition || state.listening || state.busy) return;
-  state.voiceBase = $("answerInput").value.trim() ? `${$("answerInput").value.trim()} ` : "";
+  const el = $("answerInput");
+  const start = Number.isInteger(el.selectionStart) ? el.selectionStart : el.value.length;
+  const end = Number.isInteger(el.selectionEnd) ? el.selectionEnd : el.value.length;
+  state.voicePrefix = el.value.slice(0, start);
+  state.voiceSuffix = el.value.slice(end);
   try {
     state.recognition.start();
   } catch {

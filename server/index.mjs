@@ -17,7 +17,7 @@ import { runSetup } from "./setup.mjs";
 import { startLlm, isLlmReady, stopLlm } from "./llm.mjs";
 import { synthesize } from "./tts.mjs";
 import { startInterview, userTurn, getSession } from "./interview.mjs";
-import { buildReport, listReports, loadReport, deleteReport } from "./report.mjs";
+import { buildReport, listReports, loadReport, deleteReport, rebuildAllSavedReports } from "./report.mjs";
 
 const PUBLIC = ROOT;
 let setupRunning = false;
@@ -247,6 +247,7 @@ const server = http.createServer(async (req, res) => {
 });
 
 ensureDirs();
+rebuildAllSavedReports();
 server.listen(APP_PORT, "127.0.0.1", () => {
   const url = `http://127.0.0.1:${APP_PORT}`;
   log(`面試平台已啟動：${url}`);

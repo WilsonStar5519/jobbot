@@ -1,17 +1,25 @@
 import fs from "fs";
 import path from "path";
-import { HEX_AXES, REPORTS_DIR, ensureDirs } from "./config.mjs";
+import { REPORTS_DIR, ensureDirs } from "./config.mjs";
 import { JOB } from "./job.mjs";
 import { chat } from "./llm.mjs";
 import { listQaPairs } from "./interview.mjs";
+import {
+  scoreAnswer,
+  hexagonFromItems,
+  buildComment,
+  buildOptimized,
+  isNonsense,
+  inferCategory,
+} from "./score.mjs";
 
 const GRADE_TABLE = [
-  { grade: "SS", min: 9.3, label: "極高成功機率", chance: "約 90% 以上", hint: "表達完整、專業判斷穩、例子有結果，接近可錄取水平。" },
+  { grade: "SS", min: 9.3, label: "極高成功機率", chance: "約 90% 以上", hint: "表達完整、專業判斷穩、例子有結果。" },
   { grade: "S", min: 8.5, label: "高成功機率", chance: "約 75–90%", hint: "整體到位，只需再打磨一兩個弱項。" },
-  { grade: "A", min: 7.5, label: "中高成功機率", chance: "約 55–75%", hint: "框架正確，例子同程序再具體就會更穩。" },
-  { grade: "B", min: 6.5, label: "中等成功機率", chance: "約 35–55%", hint: "有基本方向，但職責對位或危機程序仍不足。" },
-  { grade: "C", min: 5.0, label: "偏低成功機率", chance: "約 15–35%", hint: "內容偏泛，需要用課託場景同步驟重練。" },
-  { grade: "D", min: 0, label: "低成功機率", chance: "約 15% 以下", hint: "尚未對準本職位要求，建議先對照職責再完整模擬。" },
+  { grade: "A", min: 7.5, label: "中高成功機率", chance: "約 55–75%", hint: "框架正確，例子同程序再具體會更穩。" },
+  { grade: "B", min: 6.5, label: "中等成功機率", chance: "約 35–55%", hint: "有基本方向，職責對位或危機程序仍不足。" },
+  { grade: "C", min: 5.0, label: "偏低成功機率", chance: "約 15–35%", hint: "內容偏泛或扣題不足。" },
+  { grade: "D", min: 0, label: "低成功機率", chance: "約 15% 以下", hint: "未能回應題目或明顯離題。" },
 ];
 
 export function gradeFromScore(score) {
@@ -19,146 +27,101 @@ export function gradeFromScore(score) {
   return GRADE_TABLE.find((g) => s >= g.min) || GRADE_TABLE[GRADE_TABLE.length - 1];
 }
 
-const KEYWORDS = {
-  職位理解: ["關愛基金", "課後", "託管", "家長", "外出工作", "單親", "學習支援", "計劃主任", "職責", "個案", "導師", "假期", "行政"],
-  個案與家庭工作: ["個案", "家長", "學童", "家庭", "SEN", "情緒", "輔導", "需要評估", "跟進", "STAR", "例子"],
-  營運與導師管理: ["導師", "管理", "質素", "遲到", "課堂", "人手", "安全比例", "假期", "行政", "點名", "培訓"],
-  危機與保護兒童: ["安全", "保護", "通報", "督導", "紀錄", "保密", "虐兒", "自傷", "安撫", "分隔", "程序"],
-  協作與溝通: ["學校", "班主任", "社工", "協調", "轉介", "會議", "溝通", "界線", "團隊"],
-  個人特質與抗壓: ["輪班", "週末", "假期", "抗壓", "時間管理", "優先", "自我照顧", "界線", "投入"],
-};
-
-function hitScore(text, keys) {
-  const n = text.toLowerCase().replace(/\s+/g, "");
-  const hits = keys.filter((k) => n.includes(k.toLowerCase().replace(/\s+/g, "")));
-  const ratio = hits.length / keys.length;
-  const lenBonus = Math.min(2.2, text.length / 140);
-  let score = ratio * 12 + lenBonus;
-  if (hits.length === 0) score = Math.min(score, 3.2);
-  if (/(首先|接著|然後|之後|例如|當時|結果)/.test(text)) score += 0.4;
-  if (/(絕對保密|一定唔講|不會告訴任何人)/.test(text)) score -= 1.4;
-  return Math.max(1, Math.min(10, Math.round(score * 10) / 10));
+function localItems(pairs) {
+  return pairs.map((p) => {
+    const category = inferCategory(p);
+    const score = scoreAnswer(p.question, p.answer);
+    const item = { ...p, category };
+    return {
+      question: p.question,
+      answer: p.answer,
+      category,
+      score,
+      comment: buildComment(item, score),
+      optimizedAnswer: buildOptimized(item),
+    };
+  });
 }
 
-function fallbackHex(pairs) {
-  const hex = {};
-  for (const axis of HEX_AXES) {
-    const related = pairs.filter((p) => p.category === axis || (KEYWORDS[axis] && KEYWORDS[axis].some((k) => (p.answer || "").includes(k))));
-    const corpus = (related.length ? related : pairs).map((p) => p.answer).join("\n");
-    hex[axis] = hitScore(corpus, KEYWORDS[axis] || []);
-  }
-  return hex;
-}
-
-function fallbackItems(pairs) {
-  return pairs.map((p) => ({
-    question: p.question,
-    answer: p.answer,
-    category: p.category,
-    score: hitScore(p.answer, KEYWORDS[p.category] || KEYWORDS["職位理解"]),
-    comment: p.answer.length < 80 ? "答案偏短，建議補上具體步驟同結果。" : "已有作答基礎，請對照優化版把程序同例子講完整。",
-    optimizedAnswer: buildFallbackOptimized(p),
+async function enrichWithLlm(items) {
+  if (!items.length || items.every((it) => isNonsense(it.answer))) return items;
+  const payload = items.map((it, i) => ({
+    i,
+    question: it.question,
+    answer: it.answer,
   }));
+  try {
+    const { json } = await chat({
+      messages: [
+        {
+          role: "system",
+          content: "你係社工面試評審。只輸出 JSON。必須逐題對應輸入嘅 question/answer，唔可以改寫、調亂或發明題目。",
+        },
+        {
+          role: "user",
+          content: `為以下每一題寫 comment（兩句，針對呢條題）同 optimizedAnswer（粵語口語，保留應徵者原意，直接答呢條題）。
+輸入：
+${JSON.stringify(payload)}
+輸出：
+{"items":[{"i":0,"comment":"","optimizedAnswer":""}]}`,
+        },
+      ],
+      temperature: 0.2,
+      maxTokens: 1800,
+      json: true,
+    });
+    const extra = Array.isArray(json?.items) ? json.items : [];
+    return items.map((it, i) => {
+      const hit = extra.find((x) => Number(x.i) === i) || extra[i];
+      if (!hit) return it;
+      return {
+        ...it,
+        comment: String(hit.comment || it.comment).slice(0, 180) || it.comment,
+        optimizedAnswer: String(hit.optimizedAnswer || "").trim() || it.optimizedAnswer,
+      };
+    });
+  } catch {
+    return items;
+  }
 }
 
-function buildFallbackOptimized(pair) {
-  const cat = pair.category || "";
-  const keep = pair.answer.replace(/\s+/g, " ").trim().slice(0, 80);
-  const core =
-    cat.includes("危機")
-      ? "我會按「即時安全 → 專業介入同分工 → 通報、紀錄、督導同預防」處理，唔會承諾絕對保密。"
-      : cat.includes("營運")
-        ? "我會先核實事實，再澄清期望、提供支援，並訂改善期限；同時守住安全比例同向家長、督導交代。"
-        : cat.includes("職位")
-          ? "關愛基金在校課後託管係為有需要小學生提供安全課後支援，並讓家長可外出工作。計劃主任要同時處理個案／活動、導師現場管理、假期託管同行政，並同學校協調。"
-          : cat.includes("個案")
-            ? "我會用一個具體STAR例子，說明評估需要、行動、同可觀察結果，並講點樣遷移到課託嘅家長同學童工作。"
-            : "我理解並接受週末同公眾假期輪班。實務上會用優先排序同時間區塊同時處理個案、導師同行政，並做好自我照顧。";
-  return `先整理我原本提到嘅重點：${keep}${keep.endsWith("。") ? "" : "。"}\n\n${core}\n\n整個答法會扣連${JOB.program}，以兒童最佳利益為先，並確保同${JOB.unit}、學校及家長協作一致。`;
-}
-
-function reportPrompt(session) {
-  const pairs = listQaPairs(session);
-  const transcript = session.turns
-    .map((t) => `${t.role === "interviewer" ? "面試官" : "應徵者"}：${t.text}`)
-    .join("\n");
-  return `你係嚴謹嘅社工面試評審，評核「${JOB.org} ${JOB.title}（${JOB.titleEn}）」模擬面試。
-評分要針對職位：${JOB.program}；職責包括個案／活動、導師現場管理、假期託管、行政；要求註冊社工、課託／小學全方位經驗優先、週末及假期或需輪班。
-
-【評分尺度 0–10】
-9.3+ 接近可錄取；8.5+ 明顯優勢；7.5+ 達標偏上；6.5 邊緣；5 未達標；低於5 明顯離題。
-空泛熱誠、無例子、危機無程序、承諾絕對保密、迴避輪班，必須扣分。
-
-【六角圖維度】必須全部給分：${HEX_AXES.join("、")}
-
-【逐題】為每一對「面試官問題／應徵者回答」提供：
-- score（0–10）
-- comment（2–3句，粵語或繁中皆可，具體指出缺咗咩）
-- optimizedAnswer：保留應徵者原意同真實經驗，改寫成可直接口述2–3分鐘嘅完整優化答案（粵語口語，專業場合），補齊缺口。
-
-只輸出 JSON：
-{
-  "overallScore": 7.4,
-  "verdict": "總評（4–6句）",
-  "hexagon": { ${HEX_AXES.map((k) => `"${k}": 7`).join(", ")} },
-  "items": [
-    { "question": "", "answer": "", "category": "", "score": 7.0, "comment": "", "optimizedAnswer": "" }
-  ]
-}
-
-對話：
-${transcript}
-
-結構化問答（請逐項對應）：
-${JSON.stringify(pairs, null, 2)}`;
+function buildVerdict(items, grade) {
+  const n = items.length || 1;
+  const nonsenseN = items.filter((it) => isNonsense(it.answer)).length;
+  if (nonsenseN >= Math.ceil(n * 0.6)) {
+    return "多數答案未能回應題目，目前難以評估專業能力。建議用完整句子、針對問題作答後再試。";
+  }
+  const weak = items.filter((it) => it.score < 6).map((it) => it.category);
+  const strong = items.filter((it) => it.score >= 7.5).map((it) => it.category);
+  const uniq = (arr) => [...new Set(arr)];
+  const bits = [`整體評級${grade.grade}（${grade.label}）。`];
+  if (strong.length) bits.push(`相對穩陣：${uniq(strong).join("、")}。`);
+  if (weak.length) bits.push(`需要加強：${uniq(weak).join("、")}。`);
+  return bits.join("");
 }
 
 export async function buildReport(session) {
   const pairs = listQaPairs(session);
-  let parsed = null;
-  try {
-    const { json } = await chat({
-      messages: [
-        { role: "system", content: "你只輸出合法 JSON，唔好加解說。" },
-        { role: "user", content: reportPrompt(session) },
-      ],
-      temperature: 0.25,
-      maxTokens: 2200,
-      json: true,
-    });
-    parsed = json;
-  } catch {
-    parsed = null;
-  }
-
-  const hexFallback = fallbackHex(pairs);
-  const itemFallback = fallbackItems(pairs);
-  const hex = { ...hexFallback, ...(parsed?.hexagon || {}) };
-  for (const axis of HEX_AXES) {
-    const n = Number(hex[axis]);
-    hex[axis] = Number.isFinite(n) ? Math.max(1, Math.min(10, Math.round(n * 10) / 10)) : hexFallback[axis];
-  }
-
-  let items = Array.isArray(parsed?.items) && parsed.items.length ? parsed.items : itemFallback;
+  let items = localItems(pairs);
+  items = await enrichWithLlm(items);
   items = items.map((it, i) => {
-    const pair = pairs[i] || {};
+    const question = pairs[i]?.question || it.question;
+    const answer = pairs[i]?.answer || it.answer;
+    const category = inferCategory({ question, answer, category: it.category });
     return {
-      question: it.question || pair.question || "",
-      answer: it.answer || pair.answer || "",
-      category: it.category || pair.category || "",
-      score: Math.max(1, Math.min(10, Number(it.score) || pair.score || 5)),
-      comment: it.comment || itemFallback[i]?.comment || "",
-      optimizedAnswer: it.optimizedAnswer || itemFallback[i]?.optimizedAnswer || "",
+      question,
+      answer,
+      category,
+      score: scoreAnswer(question, answer),
+      comment: it.comment,
+      optimizedAnswer: it.optimizedAnswer,
     };
   });
 
-  const avgFromItems = items.length
-    ? items.reduce((s, it) => s + Number(it.score), 0) / items.length
-    : 5;
-  const avgFromHex = HEX_AXES.reduce((s, k) => s + hex[k], 0) / HEX_AXES.length;
-  let overall = Number(parsed?.overallScore);
-  if (!Number.isFinite(overall)) overall = (avgFromItems + avgFromHex) / 2;
-  overall = Math.max(1, Math.min(10, Math.round(overall * 10) / 10));
+  const overall = items.length
+    ? Math.round((items.reduce((s, it) => s + it.score, 0) / items.length) * 10) / 10
+    : 1;
+  const hex = hexagonFromItems(items, pairs);
   const g = gradeFromScore(overall);
 
   const report = {
@@ -177,16 +140,41 @@ export async function buildReport(session) {
     gradeLabel: g.label,
     chance: g.chance,
     gradeHint: g.hint,
-    verdict: parsed?.verdict || `整體${g.label}。強項同缺口請見六角圖同逐題回饋。`,
+    verdict: buildVerdict(items, g),
     hexagon: hex,
     items,
     transcript: session.turns,
   };
 
   ensureDirs();
-  const file = path.join(REPORTS_DIR, `${report.id}.json`);
-  fs.writeFileSync(file, JSON.stringify(report, null, 2), "utf8");
+  fs.writeFileSync(path.join(REPORTS_DIR, `${report.id}.json`), JSON.stringify(report, null, 2), "utf8");
   return report;
+}
+
+export function rebuildSavedReport(data) {
+  const session = {
+    id: data.id,
+    startedAt: data.startedAt,
+    turns: data.transcript || [],
+  };
+  const pairs = listQaPairs(session);
+  const items = localItems(pairs);
+  const overall = items.length
+    ? Math.round((items.reduce((s, it) => s + it.score, 0) / items.length) * 10) / 10
+    : 1;
+  const hex = hexagonFromItems(items, pairs);
+  const g = gradeFromScore(overall);
+  return {
+    ...data,
+    overallScore: overall,
+    grade: g.grade,
+    gradeLabel: g.label,
+    chance: g.chance,
+    gradeHint: g.hint,
+    verdict: buildVerdict(items, g),
+    hexagon: hex,
+    items,
+  };
 }
 
 export function listReports() {
@@ -220,4 +208,20 @@ export function loadReport(id) {
 export function deleteReport(id) {
   const file = path.join(REPORTS_DIR, `${id}.json`);
   if (fs.existsSync(file)) fs.unlinkSync(file);
+}
+
+export function rebuildAllSavedReports() {
+  ensureDirs();
+  const files = fs.readdirSync(REPORTS_DIR).filter((f) => f.endsWith(".json"));
+  for (const f of files) {
+    const full = path.join(REPORTS_DIR, f);
+    try {
+      const data = JSON.parse(fs.readFileSync(full, "utf8"));
+      if (!Array.isArray(data.transcript)) continue;
+      const next = rebuildSavedReport(data);
+      fs.writeFileSync(full, JSON.stringify(next, null, 2), "utf8");
+    } catch {
+      /* skip */
+    }
+  }
 }

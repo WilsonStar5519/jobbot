@@ -1,5 +1,3 @@
-/** 招聘原文要點：JobsDB #93615121／公開職位描述 */
-
 export const JOB = {
   org: "香港遊樂場協會",
   orgEn: "Hong Kong Playground Association",
@@ -35,47 +33,56 @@ export const INTERVIEWER = {
   unit: JOB.unit,
 };
 
+/** 只引導主題範圍；實際問法由模型自由發揮，但同一場唔可以問相似題 */
 export const AGENDA = [
   {
     id: "opening",
     phase: "opening",
     label: "起",
     category: "個人特質與抗壓",
-    ask: "禮貌歡迎，請對方介紹自己，同埋點解申請計劃主任。",
+    topic: "開場：請對方介紹自己，同埋點解申請計劃主任。",
+    angles: ["自我介紹", "申請動機", "點解揀課託而唔係其他社工崗位"],
   },
   {
     id: "job_understanding",
     phase: "development",
     label: "承",
     category: "職位理解",
-    ask: "問關愛基金在校課後託管計劃嘅目標，同計劃主任主要做咩。",
+    topic: "職位理解：關愛基金在校課後託管嘅服務目標，或者計劃主任職責。",
+    angles: ["計劃目標", "主任職責", "同學校／家長嘅角色"],
   },
   {
     id: "experience",
     phase: "development",
     label: "承",
     category: "個案與家庭工作",
-    ask: "請對方講一件最相關嘅工作經驗。",
+    topic: "相關經驗：一件可遷移到課託嘅個案、家庭或學校工作。",
+    angles: ["個案介入", "家長工作", "活動經驗", "可遷移技能"],
   },
   {
     id: "operations",
     phase: "turn",
     label: "轉",
     category: "營運與導師管理",
-    ask: "問一條營運題：導師管理、同學校協作，或假期人手不足，揀一個尚未問過嘅。",
+    topic: "營運：導師管理、學校協作，或假期人手調配，揀一個未問過嘅角度。",
+    angles: ["導師質素", "學校協作", "假期人手", "行政同現場平衡"],
   },
   {
     id: "crisis",
     phase: "turn",
     label: "轉",
     category: "危機與保護兒童",
-    ask: "問一個課託現場危機，例如學童要衝出課室，或受傷叫你保密。",
+    topic: "危機：課託現場保護兒童，揀一個未用過嘅情境。",
+    angles: ["衝出課室", "可疑傷痕要保密", "欺凌", "放學無人接", "自傷念頭"],
   },
   {
     id: "closing",
     phase: "closing",
     label: "合",
     category: "協作與溝通",
-    ask: "問週末同假期輪班得唔得；之後問有冇問題，再禮貌結束。",
+    topic: "收結：輪班安排，或者請對方提問，然後禮貌結束。",
+    angles: ["週末假期輪班", "多工節奏", "對方想問單位嘅問題"],
   },
 ];
+
+export const CLOSING_LINE = "唔該晒你今日嘅時間，面試就到呢度。之後會有一份練習報告畀你參考。";

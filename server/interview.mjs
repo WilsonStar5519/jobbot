@@ -1,74 +1,26 @@
 import crypto from "crypto";
-import { AGENDA, INTERVIEWER, JOB } from "./job.mjs";
-import { HEX_AXES } from "./config.mjs";
+import { AGENDA, INTERVIEWER, JOB, CLOSING_LINE } from "./job.mjs";
 import { chat } from "./llm.mjs";
 import { synthesize } from "./tts.mjs";
+import { isThinAnswer, questionOverlap } from "./score.mjs";
 
 const sessions = new Map();
+const OVERLAP_LIMIT = 0.52;
 
 function uid() {
   return crypto.randomBytes(8).toString("hex");
 }
 
-function jobBrief() {
-  return `職位：${JOB.org} ${JOB.unit} ${JOB.title}（${JOB.titleEn}）
-計劃：${JOB.program}
-要求：${JOB.requirements.join("；")}
-職責：${JOB.duties.join("；")}`;
+export function getSession(id) {
+  return sessions.get(id);
 }
 
-function systemPrompt() {
-  return `你係「${INTERVIEWER.address}」，香港遊樂場協會社福單位嘅面試官，而家見計劃主任（ASWO）。
-對面係專業社工，請用禮貌、平靜、尊重嘅語氣，好似真實機構面試。
-
-【開口規則】
-- 只用香港粵語口語。例如用「可唔可以」「點解」「講吓」「同埋」，唔用「請說明」「為何」「以及」「進行」。
-- 每次最多兩句：一句短承接（可省略開場），一句問題。
-- 問題只問核心，唔好加提示、框架、評語、教路。
-- 唔好講「唔好只講…」「要扣連…」「用 STAR」「標準答案」。
-- 唔好一次過問兩條以上。
-- 可中英夾雜專業詞（ASWO、SEN），但句子仍要口語。
-- say 裡面只可以係你親口會講嘅說話，絕對唔可以出現 JSON、next、followup、close、move、done、導演指示。
-
-正確例子：
-「你好，我姓陳。可唔可以先介紹吓你自己，同埋點解想申請呢個職位？」
-「唔該晒。你點睇關愛基金呢個課後託管計劃嘅目標？」
-「明白。如果有學童手臂有可疑瘀傷，同你講唔好話畀人知，你會點處理？」
-
-錯誤例子（禁止）：
-「請你用兩至三分鐘自我介紹，並說明申請原因。要扣連到課託，唔好只講喜歡小朋友。next」
-
-只輸出一個 JSON 物件：
-{"say":"粵語口語","emotion":"warm|neutral|serious|probing|encouraging","move":"followup|next|close","category":"${HEX_AXES.join("|")}","done":false}`;
+function previousQuestions(session) {
+  return session.turns.filter((t) => t.role === "interviewer").map((t) => t.text);
 }
 
-function directorPrompt(session, userAnswer) {
-  const item = AGENDA[session.agendaIndex];
-  const followUps = session.followUpsThisItem;
-  const history = session.turns
-    .map((t) => `${t.role === "interviewer" ? "官" : "應"}：${t.text}`)
-    .join("\n");
-
-  let instruction;
-  if (!userAnswer && session.turns.length === 0) {
-    instruction = `開場。任務：${item.ask}\n請用兩句內歡迎並提問。`;
-  } else if (session.agendaIndex >= AGENDA.length - 1 && followUps >= 1) {
-    instruction = `最後一題已問過。禮貌多謝對方時間並結束。done 為 true。say 兩句內，唔好評分。`;
-  } else {
-    const canFollow = followUps < 1;
-    instruction = `而家主題：${item.ask}
-應徵者剛答：「${userAnswer}」
-若答案太短或空泛，${canFollow ? "可追問一個具體例子。" : "唔好再追問，改問下一主題。"}
-最後一題則禮貌結束。承接最多一句，然後只問一條短問題。`;
-  }
-
-  return `${jobBrief()}
-
-對話：
-${history || "（開始）"}
-
-本輪：
-${instruction}`;
+function tooSimilar(say, used) {
+  return used.some((prev) => questionOverlap(say, prev) >= OVERLAP_LIMIT);
 }
 
 function cleanSay(raw) {
@@ -85,18 +37,22 @@ function cleanSay(raw) {
   s = s.replace(/(["']?(?:say|emotion|move|category|done)["']?\s*[:=]\s*[^,\n}]+)/gi, " ");
   s = s.replace(/\b(followup|next|close|done|true|false)\b/gi, " ");
   s = s.replace(/【[^】]*】/g, " ");
-  s = s.replace(/要扣連[^。！？!?，,]*/g, " ");
-  s = s.replace(/唔好只講[^。！？!?，,]*/g, " ");
-  s = s.replace(/用\s*STAR[^。！？!?]*/gi, " ");
-  s = s.replace(/導演指示[^。！？!?]*/g, " ");
-  s = s.replace(/[“”"']/g, "");
+  s = s.replace(/^(陳姑娘[：:])+/, "");
   s = s.replace(/\s+/g, " ").trim();
-  s = s.replace(/^[,.。、；;]+/, "").trim();
   return s;
 }
 
-function applyMove(session, move, hasUserAnswer) {
-  if (!hasUserAnswer) return;
+function decideMove(session, answer) {
+  const last = AGENDA.length - 1;
+  if (session.agendaIndex >= last) {
+    if (session.followUpsThisItem < 1 && isThinAnswer(answer)) return "followup";
+    return "close";
+  }
+  if (session.followUpsThisItem < 1 && isThinAnswer(answer)) return "followup";
+  return "next";
+}
+
+function applyMove(session, move) {
   if (move === "followup") {
     session.followUpsThisItem += 1;
     return;
@@ -113,8 +69,116 @@ function applyMove(session, move, hasUserAnswer) {
   }
 }
 
-export function getSession(id) {
-  return sessions.get(id);
+function targetItem(session, move) {
+  if (move === "followup" || move === "close") return AGENDA[session.agendaIndex];
+  return AGENDA[Math.min(session.agendaIndex + 1, AGENDA.length - 1)];
+}
+
+function systemPrompt() {
+  return `你係「${INTERVIEWER.address}」，香港遊樂場協會面試官，見計劃主任（ASWO）。
+對面係專業社工，語氣禮貌、平靜。
+
+【開口】
+- 香港粵語口語，每次最多兩句：一句短承接（可省略），一句問題。
+- 問題要短、只問核心，唔好提示、教路、評分，亦唔好先講答案。
+- 同一句入面唔好用兩個意思一樣嘅問法。
+- say 只可以係你親口會講嘅說話，唔好出現 JSON 欄位名。
+
+職位：${JOB.program}；職責包括個案／活動、導師管理、假期託管、行政。`;
+}
+
+function directorPrompt({ item, move, userAnswer, used, attempt }) {
+  const banned = used.length
+    ? used.map((q, i) => `${i + 1}. ${q}`).join("\n")
+    : "（未有）";
+  const retry = attempt
+    ? `\n上一稿同已問過嘅題太相似，必須換一個全新角度，唔好改幾個字就算。`
+    : "";
+
+  if (move === "close") {
+    return `面試結束。用兩句禮貌多謝對方時間，話之後有練習報告。唔好評分、唔好再問新題。`;
+  }
+
+  if (move === "followup") {
+    return `對方剛答：「${userAnswer}」
+而家主題仍係：${item.topic}
+請就住佢嘅答案追問一個全新角度（例如細節、結果、另一場景）。
+仍然留喺而家呢個主題，唔好跳去下一個大範疇。
+絕對唔可以重述、改寫或再問已出現過嘅題。
+可參考但唔好照抄嘅角度：${item.angles.join("、")}
+${retry}
+
+已問過（全部禁止再問或問到好似）：
+${banned}
+
+只輸出 JSON：{"say":"粵語口語","emotion":"probing"}`;
+  }
+
+  return `進入新主題：${item.topic}
+用你自己嘅說法出一條短問題，保持自然隨機，唔好用固定講稿。
+可參考角度：${item.angles.join("、")}
+${userAnswer ? `對方上一題答過：「${userAnswer}」先用一句承接。` : "呢題係開場。"}
+${retry}
+
+已問過（全部禁止再問或問到好似）：
+${banned}
+
+只輸出 JSON：{"say":"粵語口語","emotion":"warm|neutral|serious|probing"}`;
+}
+
+async function generateSay({ item, move, userAnswer, used }) {
+  if (move === "close") {
+    try {
+      const { json, content } = await chat({
+        messages: [
+          { role: "system", content: systemPrompt() },
+          { role: "user", content: directorPrompt({ item, move, userAnswer, used, attempt: 0 }) },
+        ],
+        temperature: 0.7,
+        maxTokens: 160,
+        json: true,
+      });
+      const say = cleanSay(json?.say || content);
+      if (say.length >= 8) return { say, emotion: "warm" };
+    } catch {
+      /* fallback */
+    }
+    return { say: CLOSING_LINE, emotion: "warm" };
+  }
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const { json, content } = await chat({
+        messages: [
+          { role: "system", content: systemPrompt() },
+          { role: "user", content: directorPrompt({ item, move, userAnswer, used, attempt }) },
+        ],
+        temperature: 0.85 + attempt * 0.05,
+        maxTokens: 220,
+        json: true,
+      });
+      const say = cleanSay(json?.say || content);
+      const emotion = ["warm", "neutral", "serious", "probing", "encouraging"].includes(json?.emotion)
+        ? json.emotion
+        : move === "followup"
+          ? "probing"
+          : item.phase === "turn"
+            ? "serious"
+            : "neutral";
+      if (say.length >= 8 && !tooSimilar(say, used)) {
+        return { say, emotion };
+      }
+    } catch {
+      /* retry */
+    }
+  }
+
+  const unused = (item.angles || []).find((angle) => !tooSimilar(angle, used));
+  const ack = userAnswer ? "唔該晒。" : "你好，我姓陳。";
+  const fallback = unused
+    ? `${ack}可唔可以就「${unused}」講吓你嘅睇法或者做法？`
+    : `${ack}可唔可以換另一個角度再講具體啲？`;
+  return { say: fallback, emotion: move === "followup" ? "probing" : "neutral" };
 }
 
 export async function startInterview() {
@@ -128,8 +192,41 @@ export async function startInterview() {
     turns: [],
   };
   sessions.set(id, session);
-  const first = await interviewerTurn(session, null);
-  return { sessionId: id, ...first };
+  const item = AGENDA[0];
+  const { say, emotion } = await generateSay({
+    item,
+    move: "next",
+    userAnswer: null,
+    used: [],
+  });
+  const turn = {
+    role: "interviewer",
+    text: say,
+    at: Date.now(),
+    emotion,
+    category: item.category,
+    phase: item.phase,
+    agendaId: item.id,
+    move: "next",
+    isFollowUp: false,
+  };
+  session.turns.push(turn);
+  try {
+    await synthesize(say, emotion);
+  } catch {
+    /* ignore */
+  }
+  return {
+    sessionId: id,
+    say,
+    emotion,
+    phase: item.phase,
+    phaseLabel: item.label,
+    category: item.category,
+    progress: { index: 1, total: AGENDA.length },
+    done: false,
+    transcript: session.turns,
+  };
 }
 
 export async function userTurn(sessionId, answer) {
@@ -139,58 +236,23 @@ export async function userTurn(sessionId, answer) {
   const text = String(answer || "").trim();
   if (!text) throw new Error("請先作答。");
 
+  const current = AGENDA[session.agendaIndex];
   session.turns.push({
     role: "user",
     text,
     at: Date.now(),
-    category: AGENDA[session.agendaIndex].category,
-    phase: AGENDA[session.agendaIndex].phase,
+    category: current.category,
+    phase: current.phase,
+    agendaId: current.id,
   });
 
-  return interviewerTurn(session, text);
-}
+  const move = decideMove(session, text);
+  const item = targetItem(session, move);
+  const used = previousQuestions(session);
+  const { say, emotion } = await generateSay({ item, move, userAnswer: text, used });
+  applyMove(session, move);
 
-async function interviewerTurn(session, userAnswer) {
-  const item = AGENDA[session.agendaIndex];
-  const { content, json } = await chat({
-    messages: [
-      { role: "system", content: systemPrompt() },
-      { role: "user", content: directorPrompt(session, userAnswer) },
-    ],
-    temperature: 0.55,
-    maxTokens: 280,
-    json: true,
-  });
-
-  const parsed = json || {
-    say: content,
-    emotion: item.phase === "turn" ? "serious" : "warm",
-    move: "next",
-    category: item.category,
-    done: false,
-  };
-
-  let move = parsed.move;
-  if (!["followup", "next", "close"].includes(move)) move = "next";
-  if (move === "followup" && session.followUpsThisItem >= 1) move = "next";
-  if (!userAnswer) {
-    move = "next";
-    parsed.done = false;
-  }
-  if (parsed.done === true) move = "close";
-
-  let say = cleanSay(parsed.say || content);
-  if (!say || say.length < 6) {
-    say = userAnswer ? "唔該晒。可唔可以再講具體啲？" : "你好，我姓陳。可唔可以先介紹吓你自己，同埋點解想申請呢個職位？";
-  }
-
-  const emotion = ["warm", "neutral", "serious", "probing", "encouraging"].includes(parsed.emotion)
-    ? parsed.emotion
-    : "neutral";
-
-  applyMove(session, move, Boolean(userAnswer));
-  const nowItem = AGENDA[Math.min(session.agendaIndex, AGENDA.length - 1)];
-  const done = Boolean(userAnswer) && (move === "close" || session.done || parsed.done === true);
+  const done = move === "close" || session.done;
   session.done = done;
 
   const turn = {
@@ -198,8 +260,9 @@ async function interviewerTurn(session, userAnswer) {
     text: say,
     at: Date.now(),
     emotion,
-    category: parsed.category || nowItem.category,
-    phase: nowItem.phase,
+    category: item.category,
+    phase: item.phase,
+    agendaId: item.id,
     move,
     isFollowUp: move === "followup",
   };
@@ -208,17 +271,17 @@ async function interviewerTurn(session, userAnswer) {
   try {
     await synthesize(say, emotion);
   } catch {
-    /* 語音稍後由前端再試 */
+    /* ignore */
   }
 
   return {
     say,
     emotion,
-    phase: nowItem.phase,
-    phaseLabel: nowItem.label,
-    category: turn.category,
+    phase: item.phase,
+    phaseLabel: item.label,
+    category: item.category,
     progress: {
-      index: Math.min(session.agendaIndex + (done ? 0 : 1), AGENDA.length),
+      index: Math.min(session.agendaIndex + 1, AGENDA.length),
       total: AGENDA.length,
     },
     done,
@@ -235,10 +298,12 @@ export function listQaPairs(session) {
       pairs.push({
         question: pendingQ.text,
         answer: turn.text,
-        category: turn.category || pendingQ.category,
+        category: pendingQ.category || turn.category,
         phase: pendingQ.phase,
+        agendaId: pendingQ.agendaId,
         emotion: pendingQ.emotion,
       });
+      pendingQ = null;
     }
   }
   return pairs;

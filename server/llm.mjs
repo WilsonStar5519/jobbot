@@ -25,6 +25,16 @@ export function isLlmReady() {
 
 export async function startLlm(onLog) {
   if (ready) return true;
+  try {
+    const res = await fetch(`${LLM_URL}/health`);
+    if (res.ok) {
+      ready = true;
+      onLog?.("本機語言模型已就緒（沿用現有服務）");
+      return true;
+    }
+  } catch {
+    /* not running yet */
+  }
   const exe = findLlamaServer();
   const model = modelPath();
   if (!exe || !model) throw new Error("尚未下載 llama.cpp 或模型");
