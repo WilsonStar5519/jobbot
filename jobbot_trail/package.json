@@ -1,0 +1,17 @@
+{
+  "name": "hkpa-interview-coach-trail",
+  "version": "2.1.0",
+  "private": true,
+  "type": "module",
+  "description": "香港遊樂場協會計劃主任（ASWO）本機即時模擬面試（jobbot_trail 優化試驗版：Qwen3-8B + 混合式 AI 評分）",
+  "scripts": {
+    "start": "node server/index.mjs",
+    "setup": "node server/setup.mjs"
+  },
+  "engines": {
+    "node": ">=18.17"
+  },
+  "dependencies": {
+    "node-edge-tts": "^1.2.10"
+  }
+}
