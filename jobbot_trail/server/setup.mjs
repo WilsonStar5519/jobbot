@@ -5,6 +5,7 @@ import {
   VENDOR_DIR,
   MODELS_DIR,
   MODEL,
+  PARENT_VENDOR_DIR,
   modelPath,
   findLlamaServer,
   ensureDirs,
@@ -86,9 +87,16 @@ function unzip(zipPath, destDir) {
 
 export async function ensureLlama(onProgress) {
   ensureDirs();
-  if (findLlamaServer()) {
-    onProgress?.({ stage: "llama", message: "已找到 llama-server，略過下載" });
-    return findLlamaServer();
+  const existing = findLlamaServer();
+  if (existing) {
+    const reusedParent = existing.startsWith(PARENT_VENDOR_DIR);
+    onProgress?.({
+      stage: "llama",
+      message: reusedParent
+        ? "已沿用原版 llama.cpp（只讀，唔會改動原版檔案），略過下載"
+        : "已找到 llama-server，略過下載",
+    });
+    return existing;
   }
   onProgress?.({ stage: "llama", message: "正在查詢 GitHub llama.cpp 最新版本…" });
   const asset = await fetchLatestLlamaAssets();

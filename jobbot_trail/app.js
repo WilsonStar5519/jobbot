@@ -468,7 +468,7 @@ async function refreshStatus() {
     if (s.llmReady) {
       pill.textContent = "已就緒";
       pill.className = "engine-pill is-ready";
-      copy.textContent = "";
+      copy.textContent = s.trail ? `試驗版已載入 ${s.modelFile || "Qwen3"}（埠 ${s.appPort || 3001}）` : "";
       setupBtn.hidden = true;
     } else if (s.readyFiles) {
       pill.textContent = "載入中";

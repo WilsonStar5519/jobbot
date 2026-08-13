@@ -11,10 +11,13 @@ export const REPORTS_DIR = path.join(DATA_DIR, "reports");
 export const TTS_CACHE_DIR = path.join(DATA_DIR, "tts-cache");
 export const RUNTIME_FILE = path.join(DATA_DIR, "runtime.json");
 
-export const APP_PORT = Number(process.env.APP_PORT || 3000);
-export const LLM_PORT = Number(process.env.LLM_PORT || 8090);
+// 試驗版預設用 3001／8091，避免同原版（3000／8090）搶埠或誤連原版已啟動嘅 Qwen2.5。
+export const APP_PORT = Number(process.env.APP_PORT || 3001);
+export const LLM_PORT = Number(process.env.LLM_PORT || 8091);
 export const LLM_HOST = "127.0.0.1";
 export const LLM_URL = `http://${LLM_HOST}:${LLM_PORT}`;
+export const IS_TRAIL = true;
+export const PARENT_VENDOR_DIR = path.resolve(ROOT, "..", "vendor", "llama");
 
 // Qwen3-8B（官方 GGUF）：同 README 電腦配置（Windows + NVIDIA GPU 如 RTX 3080、約 16GB 記憶體）相容，
 // 檔案大小同上一代 Qwen2.5-7B 相若（約 4.7GB／Q4_K_M），但指令遵循、JSON 結構化輸出同中文／粵語表達更穩。
@@ -55,9 +58,9 @@ export function modelPath() {
   return path.join(MODELS_DIR, MODEL.file);
 }
 
-export function findLlamaServer() {
-  if (!fs.existsSync(VENDOR_DIR)) return null;
-  const stack = [VENDOR_DIR];
+function findLlamaIn(root) {
+  if (!root || !fs.existsSync(root)) return null;
+  const stack = [root];
   while (stack.length) {
     const dir = stack.pop();
     for (const name of fs.readdirSync(dir)) {
@@ -75,6 +78,11 @@ export function findLlamaServer() {
     }
   }
   return null;
+}
+
+export function findLlamaServer() {
+  // 優先用試驗版自己嘅引擎；若未下載，只讀取沿用原版 vendor（唔會改寫原版檔案）。
+  return findLlamaIn(VENDOR_DIR) || findLlamaIn(PARENT_VENDOR_DIR);
 }
 
 export function isReady() {

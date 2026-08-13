@@ -4,9 +4,12 @@ import path from "path";
 import { exec } from "child_process";
 import {
   APP_PORT,
+  LLM_PORT,
   ROOT,
   HEX_AXES,
   VOICE,
+  MODEL,
+  IS_TRAIL,
   ensureDirs,
   isReady,
   findLlamaServer,
@@ -95,6 +98,10 @@ async function statusPayload() {
     voice: VOICE.name,
     job: JOB,
     hexAxes: HEX_AXES,
+    trail: Boolean(IS_TRAIL),
+    appPort: APP_PORT,
+    llmPort: LLM_PORT,
+    modelFile: MODEL.file,
     logs: logs.slice(-12),
   };
 }
@@ -262,7 +269,8 @@ ensureDirs();
 rebuildAllSavedReports();
 server.listen(APP_PORT, "127.0.0.1", () => {
   const url = `http://127.0.0.1:${APP_PORT}`;
-  log(`面試平台已啟動：${url}`);
+  log(`面試平台（試驗版）已啟動：${url}　｜　模型埠 ${LLM_PORT}　｜　${MODEL.file}`);
+  log("此為 jobbot_trail 試驗版，唔會寫入原版 data／models／vendor。原版仍用 http://127.0.0.1:3000");
   openBrowser(url);
   if (isReady()) {
     startLlm((m) => log(m)).catch((err) => log(`模型稍後再載入：${err.message}`));

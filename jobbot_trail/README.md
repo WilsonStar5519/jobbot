@@ -31,7 +31,7 @@ npm install
 npm start
 ```
 
-瀏覽器開啟：http://127.0.0.1:3000
+瀏覽器開啟：**http://127.0.0.1:3001**（試驗版專用埠；原版仍係 3000）
 
 首次進入首頁，按「下載本機引擎」。完成後即可開始完整模擬面試。一場約 12–15 分鐘（約 5–6 條主問題，加機動追問）。
 
@@ -41,6 +41,24 @@ npm start
 npm run setup
 npm start
 ```
+
+## 如何在不影響原版的情況下測試
+
+詳見 [`TESTING.md`](./TESTING.md)。重點：
+
+1. **只喺 `jobbot_trail/` 資料夾入面執行** `npm start`／`start.bat`，唔好改根目錄檔案。
+2. 試驗版預設用 **網頁埠 3001、模型埠 8091**；原版仍係 3000／8090，兩邊唔會搶埠、亦唔會共用報告檔。
+3. 語言模型檔案分開存放：試驗版下載 `Qwen3-8B` 到 `jobbot_trail/models/`，唔會覆蓋原版 `models/` 入面嘅 Qwen2.5。
+4. llama.cpp 引擎可以**只讀沿用**原版已經下載好嘅 `vendor/`，唔使再下載一次，亦唔會改寫原版檔案。
+5. **同一張 GPU 唔好同時載入兩個語言模型**（原版 Qwen2.5 + 試驗版 Qwen3）。測試試驗版前，請先關閉原版視窗（Ctrl+C）。
+
+```bash
+cd jobbot_trail
+npm install
+npm start
+```
+
+然後用 Chrome／Edge 開 http://127.0.0.1:3001 。原版如果之後要開返，去返 repo 根目錄執行 `npm start`，開 http://127.0.0.1:3000 。
 
 ## 評級（SS–D）
 
