@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#08483e" />
+  <title>計劃主任即時模擬面試｜香港遊樂場協會</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Shippori+Mincho:wght@500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body data-stage="home">
+  <div class="decor" aria-hidden="true">
+    <span class="orb orb-lime"></span>
+    <span class="orb orb-teal"></span>
+    <span class="orb orb-coral"></span>
+  </div>
+  <div class="bg-grid" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <button type="button" class="brand brand-btn" id="homeBtn" aria-label="返回首頁">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <div>
+        <p class="brand-name">HKPA 面試教練</p>
+        <p class="brand-sub">計劃主任 ASWO</p>
+      </div>
+    </button>
+    <div class="topbar-meta" id="topbarMeta" hidden>
+      <span id="progressLabel">1 / 6</span>
+      <div class="progress-track" aria-hidden="true">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+    </div>
+  </header>
+
+  <main class="stage-host">
+    <section class="panel panel-welcome is-active" id="welcomePanel">
+      <div class="welcome-copy">
+        <h1>香港遊樂場協會<br /><em>計劃主任</em>面試</h1>
+        <p class="lede">關愛基金在校課後託管 · 完整一輪模擬</p>
+        <div class="engine-card" id="engineCard">
+          <div class="engine-row">
+            <strong id="engineTitle">準備狀態</strong>
+            <span class="engine-pill" id="enginePill">檢查中</span>
+          </div>
+          <p class="engine-copy" id="engineCopy"></p>
+          <div class="setup-track" hidden id="setupTrack">
+            <div class="setup-fill" id="setupFill"></div>
+          </div>
+          <button type="button" class="btn btn-ghost" id="setupBtn" hidden>下載本機引擎</button>
+        </div>
+        <div class="cta-row">
+          <button type="button" class="btn btn-primary" id="startBtn" disabled>開始面試</button>
+        </div>
+      </div>
+
+      <aside class="welcome-card" id="briefCard">
+        <h2>職位速覽</h2>
+        <dl>
+          <div><dt>機構</dt><dd>香港遊樂場協會</dd></div>
+          <div><dt>單位</dt><dd>賽馬會上葵涌青少年綜合服務（KIT）</dd></div>
+          <div><dt>職位</dt><dd>計劃主任 ASWO</dd></div>
+          <div><dt>計劃</dt><dd>關愛基金—在校課後託管（2026/27）</dd></div>
+          <div><dt>地點</dt><dd>葵青區 · 全職 · 或需週末／假期輪班</dd></div>
+        </dl>
+        <ul class="focus-list">
+          <li>註冊社工（學士或以上）</li>
+          <li>課託／小學全方位社工經驗優先</li>
+          <li>個案、導師管理、假期活動、行政</li>
+        </ul>
+      </aside>
+
+      <section class="home-block progress-block" id="progressBlock">
+        <div class="block-head">
+          <h2>面試報告存檔</h2>
+          <button type="button" class="btn btn-tiny" id="clearHistoryBtn">清除全部</button>
+        </div>
+        <div class="stats-row" id="statsRow">
+          <div class="stat"><strong id="statSessions">0</strong><span>已完成場次</span></div>
+          <div class="stat"><strong id="statGrade">—</strong><span>最近評級</span></div>
+          <div class="stat"><strong id="statBest">—</strong><span>最高評級</span></div>
+          <div class="stat"><strong id="statWeak">—</strong><span>最需加強</span></div>
+        </div>
+        <div class="history-list" id="historyList">
+          <p class="empty-hint">完成面試後，報告會出現在這裡。</p>
+        </div>
+      </section>
+
+      <section class="home-block sheets-block">
+        <h2>面試掣記欄</h2>
+        <div class="sheet-tabs" role="tablist" aria-label="掣記欄分類">
+          <button type="button" class="sheet-tab is-active" role="tab" aria-selected="true" data-sheet="mistakes">常犯錯誤</button>
+          <button type="button" class="sheet-tab" role="tab" aria-selected="false" data-sheet="frameworks">答題框架</button>
+          <button type="button" class="sheet-tab" role="tab" aria-selected="false" data-sheet="job">職位筆記</button>
+          <button type="button" class="sheet-tab" role="tab" aria-selected="false" data-sheet="personal">個人備忘</button>
+        </div>
+        <div class="sheet-panels">
+          <div class="sheet-panel is-active" id="sheet-mistakes" role="tabpanel">
+            <ul class="cheat-list">
+              <li><strong>只談理想、不談職責</strong> — 少提個案、導師管理、假期託管、行政。</li>
+              <li><strong>只談熱誠、不談例子</strong> — 沒有具體課託／學校場景與結果。</li>
+              <li><strong>危機題忽略程序</strong> — 只說陪伴，沒提安全、督導、紀錄、通報。</li>
+              <li><strong>答應兒童「絕對保密」</strong> — 疑似虐兒時保密有例外。</li>
+              <li><strong>迴避輪班</strong> — 不正面回應週末／假期工作安排。</li>
+              <li><strong>例子沒有結果</strong> — 有情境無行動，或有行動無成效。</li>
+            </ul>
+          </div>
+          <div class="sheet-panel" id="sheet-frameworks" role="tabpanel" hidden>
+            <ul class="cheat-list">
+              <li><strong>STAR（行為題）</strong>：情境 Situation → 任務 Task → 行動 Action → 結果 Result。</li>
+              <li><strong>危機三步</strong>：即時安全 → 專業介入／分工 → 通報跟進與預防。</li>
+              <li><strong>保護兒童</strong>：不承諾絕對保密 → 評估紀錄 → 督導／機構程序。</li>
+              <li><strong>導師管理</strong>：核實事實 → 澄清期望 → 支援提升 → 問責期限。</li>
+              <li><strong>90 日計劃</strong>：熟悉流程 → 建立關係 → 優化營運與檢討。</li>
+            </ul>
+          </div>
+          <div class="sheet-panel" id="sheet-job" role="tabpanel" hidden>
+            <ul class="cheat-list">
+              <li><strong>計劃目標</strong>：在校課後託管與學習支援；支援家長（尤其單親／雙職）外出工作。</li>
+              <li><strong>主任職責</strong>：家長及學童個案／活動、導師現場管理、假期活動、行政。</li>
+              <li><strong>優先經驗</strong>：社署課託、小學全方位社工；註冊社工（學位或以上）。</li>
+              <li><strong>工作現實</strong>：葵青區；週末及公眾假期或需輪班。</li>
+            </ul>
+          </div>
+          <div class="sheet-panel" id="sheet-personal" role="tabpanel" hidden>
+            <label class="memo-label" for="personalMemo">寫下你的個人例子、數據或想記住的要點（自動儲存）</label>
+            <textarea id="personalMemo" class="memo-input" rows="8" placeholder="例如：我在 XX 小學課託處理過 SEN 情緒個案……；可分享的成果：家長滿意度／出席率……"></textarea>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <section class="panel panel-interview" id="interviewPanel">
+      <div class="room">
+        <aside class="interviewer-pane">
+          <div class="avatar-wrap" id="avatarWrap">
+            <div class="avatar" aria-hidden="true">
+              <span class="avatar-hair"></span>
+              <span class="avatar-face"></span>
+            </div>
+            <div class="wave" id="wave" hidden>
+              <i></i><i></i><i></i><i></i><i></i>
+            </div>
+          </div>
+          <p class="interviewer-name">陳嘉敏姑娘</p>
+          <p class="interviewer-role">面試官</p>
+          <p class="live-status" id="liveStatus"></p>
+        </aside>
+
+        <div class="dialogue-pane">
+          <article class="now-speaking" id="nowSpeaking">
+            <h2 id="questionText"></h2>
+          </article>
+          <div class="transcript" id="transcript" aria-live="polite"></div>
+          <div class="answer-dock">
+            <label class="sr-only" for="answerInput">你的答案</label>
+            <textarea id="answerInput" rows="4" placeholder="作答（識字有誤可直接改）"></textarea>
+            <div class="dock-tools">
+              <button type="button" class="btn-voice" id="voiceBtn" aria-pressed="false">
+                <span class="voice-icon" aria-hidden="true"></span>
+                <span id="voiceLabel">說話</span>
+              </button>
+              <span class="voice-status" id="voiceStatus"></span>
+              <span class="char-count" id="charCount">0 字</span>
+              <div class="tool-btns">
+                <button type="button" class="btn btn-ghost" id="homeFromInterviewBtn">離開</button>
+                <button type="button" class="btn btn-primary" id="submitBtn">送出</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel panel-results" id="resultsPanel">
+      <div class="results-hero">
+        <div class="grade-badge" id="gradeBadge">—</div>
+        <p class="grade-label" id="gradeLabel"></p>
+        <p class="chance-line" id="chanceLine"></p>
+        <div class="overall-score">
+          <span id="overallScore">0</span>
+          <small>／10</small>
+        </div>
+        <p id="overallVerdict" class="lede"></p>
+      </div>
+
+      <div class="report-layout">
+        <figure class="radar-card">
+          <h3>面試能力六角圖</h3>
+          <canvas id="radarCanvas" width="420" height="420"></canvas>
+          <ul class="radar-legend" id="radarLegend"></ul>
+        </figure>
+        <div class="report-meta" id="reportMeta"></div>
+      </div>
+
+      <div class="results-grid" id="resultsGrid"></div>
+      <div class="results-actions">
+        <button type="button" class="btn btn-primary" id="retryBtn">再面試</button>
+        <button type="button" class="btn btn-ghost" id="printBtn">列印</button>
+        <button type="button" class="btn btn-ghost" id="reviewBtn">返回</button>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>練習用途</p>
+  </footer>
+
+  <script src="./app.js"></script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+node_modules/
+vendor/
+models/
+data/reports/
+data/tts-cache/
+data/runtime.json
+*.gguf
+.DS_Store
+Thumbs.db
+.env

@@ -1,0 +1,17 @@
+{
+  "name": "hkpa-interview-coach",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "香港遊樂場協會計劃主任（ASWO）本機即時模擬面試",
+  "scripts": {
+    "start": "node server/index.mjs",
+    "setup": "node server/setup.mjs"
+  },
+  "engines": {
+    "node": ">=18.17"
+  },
+  "dependencies": {
+    "node-edge-tts": "^1.2.10"
+  }
+}
